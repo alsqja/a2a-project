@@ -16,7 +16,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
     show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database: mysql
