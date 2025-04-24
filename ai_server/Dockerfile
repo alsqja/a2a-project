@@ -7,12 +7,13 @@ RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
-    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/apt/lists/*
 
-
+# requirements 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 소스 복사
 COPY . .
 
 # Set environment variables
@@ -23,8 +24,6 @@ ENV PYTHONUNBUFFERED=1
 RUN useradd -m appuser
 USER appuser
 
-# Expose the port Django runs on
 EXPOSE 8000
 
-# Start the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
