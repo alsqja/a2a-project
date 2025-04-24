@@ -6,12 +6,29 @@ from rest_framework.views import APIView
 
 from chat_agent.services.agent_chat_service import run_agent_conversation
 from chat_agent.services.chat_service import ChatService
+from chat_agent.services.chat_summary_service import create_chat_summary
 from chat_agent.services.pdf_service import PDFAnalysisService
 from asgiref.sync import async_to_sync
 
+class ChatSummaryView(APIView):
+    def post(self, request, room_id):
+
+        try:
+            lead_id = request.data.get('leadId')
+
+            response = async_to_sync(create_chat_summary)(room_id, lead_id)
+        except Exception as e:
+            print(e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "message": "대화 요약 출력 완료",
+            "data": response,
+        }, status=status.HTTP_200_OK)
+
 class A2aChatView(APIView):
     def post(self, request):
-        lead_id = request.data.get('lead_id')
+        lead_id = request.data.get('leadId')
 
         try:
             async_to_sync(run_agent_conversation)(lead_id=lead_id)
