@@ -1,0 +1,281 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ company_name }} 기업 정보</title>
+    <style>
+        body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: "Noto Sans KR", sans-serif;
+            color: #3b3b3b;
+            background-color: #e1e1e1;
+        }
+
+        header {
+            border-bottom: 1px solid #3b3b3b;
+        }
+
+        header .report-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            max-width: 100px;
+            max-height: 100px;
+            margin-right: 20px;
+        }
+
+        .company-title h1 {
+            margin-bottom: 5px;
+        }
+
+        main {
+            /* A2A 이미지 속성 */
+            background-image: url("https://web-portfolio-files.s3.ap-northeast-2.amazonaws.com/a2a-logo.png");
+            background-repeat: no-repeat;
+            background-position: left bottom;
+            background-size: 400px auto;
+        }
+
+        section {
+            border-bottom: 1px solid #3b3b3b;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: baseline;
+            gap: 30px;
+            border-bottom: solid #d9d9d9;
+        }
+
+        .info-item h3 {
+            min-width: 150px;
+            font-size: 15px;
+            color: #3b3b3b;
+            font-weight: 600;
+        }
+
+        .info-item p {
+            color: #595858;
+            font-size: 15px;
+        }
+
+        .double-item {
+            display: flex;
+            flex-direction: row;
+            gap: 50px;
+        }
+
+        .inline-pair {
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+        }
+
+        .highlight {
+            color: #4708dc;
+            font-weight: bold;
+        }
+
+        .text-bold {
+            font-weight: bold;
+        }
+
+        .half-flex {
+          {#display: flex;#}
+          flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 회사 헤더 (로고, 회사명) -->
+    <header class="header">
+        <div class="company-title">
+            <p class="report-header">
+                <img src="https://web-portfolio-files.s3.ap-northeast-2.amazonaws.com/peak-logo.png" alt="logo"
+                    class="logo-small" />
+                기업 분석 리포트
+            </p>
+            <h1>{{ company_name }}</h1>
+            <p>
+                {# 리스트가 있으면 콤마로 합쳐서, 없으면 '정보 없음' #}
+                {% if industry_keywords %}
+                {{ industry_keywords|join:", " }}
+                {% else %}
+                정보 없음
+                {% endif %}
+            </p>
+        </div>
+    </header>
+
+    <!-- main 콘텐츠 시작 -->
+    <main>
+        <!-- 회사 기본 정보 -->
+        <section class="section-basic-info">
+            <div>
+                <div class="info-item">
+                    <h3>주요 산업 키워드</h3>
+                    <p>
+                        {# 리스트가 있으면 콤마로 합쳐서, 없으면 '정보 없음' #}
+                        {% if industry_keywords %}
+                        {{ industry_keywords|join:", " }}
+                        {% else %}
+                        정보 없음
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="info-item">
+                    <h3>회사 주소/위치</h3>
+                    <p>{{ company_address|default:'정보 없음' }}</p>
+                </div>
+                <div class="double-item info-item">
+                    <div class="inline-pair">
+                        <h3>대표자</h3>
+                        <p>{{ key_executives|default:'정보 없음' }}</p>
+                    </div>
+                    <div class="inline-pair">
+                        <h3>설립일</h3>
+                        <p style="min-width: 100px">{{ founded_date|default:'정보 없음' }}</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <h3>기업 요약</h3>
+                    <p>{{ company_summary|default:'정보 없음' }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>타겟 고객군</h3>
+                    <p>
+                        {# 리스트가 있으면 콤마로 합쳐서, 없으면 '정보 없음' #}
+                        {% if target_customers %}
+                        {{ target_customers|join:", " }}
+                        {% else %}
+                        정보 없음
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="info-item">
+                    <h3>재무 상태</h3>
+                    <p>
+                        {# 리스트가 있으면 콤마로 합쳐서, 없으면 '정보 없음' #}
+                        {% if financial_info %}
+                        {{ financial_info|join:", " }}
+                        {% else %}
+                        정보 없음
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="info-item">
+                    <h3>최신 동향</h3>
+                    <p>
+                        {# 리스트가 있으면 콤마로 합쳐서, 없으면 '정보 없음' #}
+                        {% if recent_trends %}
+                        {{ recent_trends|join:", " }}
+                        {% else %}
+                        정보 없음
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 기업명, 주요 경쟁 분야 -->
+        <section class="section-business">
+            <div class="double-item info-item">
+                <div class="half-flex">
+                    <h3>경쟁사</h3>
+                    {% if competitors %}
+                    <ul>
+                        {% for name, area in competitors.items %}
+                        <li>{{ name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>정보 없음</p>
+                    {% endif %}
+                </div>
+                <div class="half-flex">
+                    <h3>주요 경쟁 분야</h3>
+                    {% if competitors %}
+                    <ul>
+                        {% for name, area in competitors.items %}
+                        <li>{{ area }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>정보 없음</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- 강점 및 차별점 -->
+        <section class="section-strength info-item">
+            <h3>강점 및 차별점</h3>
+            <p>
+                {% if risk_factors %}
+            <ul>
+                {% for strength in strengths %}
+                <li>{{ strength }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>정보 없음</p>
+            {% endif %}
+            </p>
+        </section>
+
+        <!-- 리스크요인 + 리드 점수-->
+        <section class="section-sales">
+            <div class="info-item">
+                <h3>리스크 요인</h3>
+                <p class="text-bold">
+                    {% if risk_factors %}
+                <ul>
+                    {% for risk in risk_factors %}
+                    <li>{{ risk }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>정보 없음</p>
+                {% endif %}
+                </p>
+            </div>
+        </section>
+        <section class="section-sales info-grid">
+            <div class="info-item">
+                <h3>리드 점수</h3>
+                <p class="highlight">{{ lead_score|default:'None' }}</p>
+            </div>
+        </section>
+
+        <!-- 참고 링크(뉴스 링크) -->
+        <section class="info-item">
+            <div>
+                <h3>참고 링크</h3>
+                {% if news %} {% for links in news %}
+
+                <p>
+                    <a href="{{ links.url }}">{{ links.title }}</a>
+                </p>
+                {# <p>{{ news.date }} | {{ news.source }}</p>#}
+
+                {% endfor %} {% else %}
+                <p>관련 뉴스가 없습니다.</p>
+                {% endif %}
+            </div>
+        </section>
+        <div class="border-line"></div>
+    </main>
+</body>
+
+</html>
