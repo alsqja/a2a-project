@@ -26,7 +26,7 @@ public class CompanyFile extends BaseEntity {
     @Column(name = "file_name")
     private String fileName;
 
-    @Column(name = "url")
+    @Column(name = "url", length = 1024)
     private String url;
 
     @Lob
