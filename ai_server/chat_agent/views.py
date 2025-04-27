@@ -1,7 +1,11 @@
 import asyncio
+import json
+import queue
+import threading
 
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.template.loader import render_to_string
+from django.views import View
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -29,16 +33,44 @@ class ChatSummaryView(APIView):
             "data": response,
         }, status=status.HTTP_200_OK)
 
-class A2aChatView(APIView):
-    def post(self, request):
-        lead_id = request.data.get('leadId')
 
-        try:
-            async_to_sync(run_agent_conversation)(lead_id=lead_id)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class A2aChatView(View):
+    def get(self, request, lead_id):
+        def event_stream():
+            # 스레드 간 통신을 위한 큐
+            q = queue.Queue()
 
-        return Response({'message': "협상 완료"}, status=status.HTTP_200_OK)
+            # 비동기 작업을 실행할 스레드
+            def worker():
+                async def process():
+                    async for chat in run_agent_conversation(lead_id):
+                        formatted_data = f"data: {json.dumps(chat)}\n\n"
+                        q.put(formatted_data)
+                    # 작업 완료 표시
+                    q.put(None)
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(process())
+                finally:
+                    loop.close()
+
+            # 백그라운드에서 비동기 작업 시작
+            t = threading.Thread(target=worker)
+            t.daemon = True
+            t.start()
+
+            # 큐에서 결과를 하나씩 가져와 반환
+            while True:
+                result = q.get()
+                if result is None:  # 작업 완료 신호
+                    break
+                yield result
+
+        response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        return response
 
 class ChatAgentView(APIView):
     def post(self, request):
