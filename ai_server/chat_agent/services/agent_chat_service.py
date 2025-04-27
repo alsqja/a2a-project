@@ -158,6 +158,7 @@ def save_chat_and_return(chat_room_id, from_id, to_id, contents) -> dict:
         "fromCompanyName": from_company.company_name,
         "toCompanyName": to_company.company_name,
         "contents": chat.contents,
+        "roomId": chat_room_id,
         "createdAt": chat.created_at.isoformat(),
         "updatedAt": chat.updated_at.isoformat(),
     }
