@@ -3,6 +3,7 @@ import json
 import queue
 import threading
 
+from django.db import close_old_connections
 from django.http import HttpResponse, StreamingHttpResponse
 from django.template.loader import render_to_string
 from django.views import View
@@ -42,6 +43,8 @@ class A2aChatView(View):
 
             # 비동기 작업을 실행할 스레드
             def worker():
+                close_old_connections()
+
                 async def process():
                     async for chat in run_agent_conversation(lead_id):
                         formatted_data = f"data: {json.dumps(chat)}\n\n"
