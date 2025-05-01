@@ -90,6 +90,7 @@ DATABASES = {
         'PASSWORD': '2626',
         'HOST': os.getenv('DB_HOST'),
         'PORT': '3306',
+        'CONN_HEALTH_CHECKS': True,
     }
 }
 
