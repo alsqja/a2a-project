@@ -207,12 +207,11 @@ async def save_chat_and_return(chat_room_id, from_company, to_company, contents)
     """
     chat = await Chat.objects.acreate(
         chat_room_id=chat_room_id,
-        from_field_id=from_company.id, # 모델 필드명 확인 필요 ('from_field' or 'from_company'?)
-        to_id=to_company.id,           # 모델 필드명 확인 필요 ('to' or 'to_company'?)
+        from_field_id=from_company.id,
+        to_id=to_company.id,
         contents=contents
     )
 
-    # DB에서 다시 읽는 대신 전달받은 객체의 정보를 사용합니다.
     return {
         "id": chat.id,
         "fromId": from_company.id,
@@ -221,23 +220,24 @@ async def save_chat_and_return(chat_room_id, from_company, to_company, contents)
         "toCompanyName": to_company.company_name,
         "contents": chat.contents,
         "roomId": chat_room_id,
-        # isoformat()은 동기 함수이므로 그대로 사용 가능
         "createdAt": chat.created_at.isoformat(),
         "updatedAt": chat.updated_at.isoformat(),
     }
 
-async def get_lead(lead_id):
-    """지정된 ID의 Lead 객체를 비동기적으로 가져옵니다."""
-    try:
-        # select_related 를 사용하여 관련 Company 객체를 미리 로드 (성능 향상)
-        # 실제 모델의 related_name 또는 필드명 확인 필요
-        return await Lead.objects.select_related('lead_company', 'source_company').aget(id=lead_id)
-    except Lead.DoesNotExist:
-        logger.warning(f"Lead with id={lead_id} does not exist.")
-        return None
-    except Exception as e:
-        logger.error(f"Error fetching lead {lead_id}: {e}", exc_info=True)
-        raise # 에러를 다시 발생시켜 상위 호출자가 처리하도록 함
+async def get_lead(lead_id: int, retries: int = 3, delay: float = 1.0) -> Lead | None:
+    """지정된 ID의 Lead 객체를 비동기적으로 가져옵니다. 일반 예외에 대해 재시도합니다."""
+    for attempt in range(1, retries + 1):
+        try:
+            return await Lead.objects.select_related('lead_company', 'source_company').aget(id=lead_id)
+        except Lead.DoesNotExist:
+            logger.warning(f"Lead with id={lead_id} does not exist.")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching lead {lead_id} (attempt {attempt}): {e}", exc_info=True)
+            if attempt < retries:
+                await asyncio.sleep(delay)
+            else:
+                raise  # 재시도 실패 후 최종 에러는 상위로 전달
 
 async def get_company(company_id):
     """지정된 ID의 Company 객체를 비동기적으로 가져옵니다."""
@@ -253,31 +253,11 @@ async def get_company(company_id):
 async def get_latest_summary(company):
     """주어진 Company 객체에 대한 가장 최신 CompanyFile의 요약을 비동기적으로 가져옵니다."""
     try:
-        # .filter().aorder_by().afirst() 사용
         latest_file = await CompanyFile.objects.filter(company=company).order_by('-created_at').afirst()
-        return latest_file.summary if latest_file else None # 요약이 없을 수 있음
+        return latest_file.summary if latest_file else None
     except Exception as e:
-        # company 객체가 유효하지 않은 경우 등 에러 처리
         logger.error(f"Error fetching latest summary for company {company.id}: {e}", exc_info=True)
-        return None # 요약을 가져올 수 없는 경우 None 반환
-
-# 아래 함수들은 get_lead에서 select_related를 사용하면 필요 없어질 수 있습니다.
-# 만약 get_lead에서 select_related를 사용하지 않는다면 아래 함수들도 async로 구현해야 합니다.
-# async def get_lead_company(lead):
-#     try:
-#         # lead 객체에 lead_company 객체가 로드되어 있지 않다면 비동기 로딩 필요
-#         # return await Company.objects.aget(id=lead.lead_company_id) # 예시
-#         return lead.lead_company # 이미 로드되었다고 가정
-#     except Exception as e:
-#         logger.error(f"Error accessing lead_company for lead {lead.id}: {e}", exc_info=True)
-#         raise
-
-# async def get_source_company(lead):
-#     try:
-#         return lead.source_company # 이미 로드되었다고 가정
-#     except Exception as e:
-#         logger.error(f"Error accessing source_company for lead {lead.id}: {e}", exc_info=True)
-#         raise
+        return None
 
 async def create_chat_room(lead_id):
     """지정된 lead_id로 ChatRoom 객체를 비동기적으로 생성합니다."""
@@ -287,8 +267,3 @@ async def create_chat_room(lead_id):
     except Exception as e:
         logger.error(f"Error creating chat room for lead {lead_id}: {e}", exc_info=True)
         raise
-
-# 사용하지 않는 save_chat 함수는 제거했습니다.
-# @sync_to_async
-# def save_chat(chat_room_id, from_id, to_id, contents) -> str:
-#     ...
