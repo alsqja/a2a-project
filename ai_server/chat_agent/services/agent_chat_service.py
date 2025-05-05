@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from agents import Agent, Runner
+from asgiref.sync import sync_to_async
+from django.db import close_old_connections
 
 from chat_agent.models import Company, CompanyFile, Lead, Chat, ChatRoom
 
@@ -229,6 +231,7 @@ async def get_lead(lead_id: int, retries: int = 3, delay: float = 1.0) -> Lead |
     """지정된 ID의 Lead 객체를 비동기적으로 가져옵니다. 일반 예외에 대해 재시도합니다."""
     for attempt in range(1, retries + 1):
         try:
+            await sync_to_async(close_old_connections)()
             return await Lead.objects.select_related('lead_company', 'source_company').aget(id=lead_id)
         except Lead.DoesNotExist:
             logger.warning(f"Lead with id={lead_id} does not exist.")
@@ -236,9 +239,10 @@ async def get_lead(lead_id: int, retries: int = 3, delay: float = 1.0) -> Lead |
         except Exception as e:
             logger.error(f"Error fetching lead {lead_id} (attempt {attempt}): {e}", exc_info=True)
             if attempt < retries:
+                await sync_to_async(close_old_connections)()
                 await asyncio.sleep(delay)
             else:
-                raise  # 재시도 실패 후 최종 에러는 상위로 전달
+                raise
 
 async def get_company(company_id):
     """지정된 ID의 Company 객체를 비동기적으로 가져옵니다."""

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import queue
 import threading
 
@@ -16,7 +17,9 @@ from chat_agent.services.chat_service import ChatService
 from chat_agent.services.chat_summary_service import create_chat_summary
 from chat_agent.services.lead_details_service import LeadDetailsService
 from chat_agent.services.pdf_service import PDFAnalysisService
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
+
+logger = logging.getLogger(__name__)
 
 class ChatSummaryView(APIView):
     def post(self, request, room_id):
@@ -46,11 +49,17 @@ class A2aChatView(View):
                 close_old_connections()
 
                 async def process():
-                    async for chat in run_agent_conversation(lead_id):
-                        formatted_data = f"data: {json.dumps(chat)}\n\n"
-                        q.put(formatted_data)
-                    # 작업 완료 표시
-                    q.put(None)
+                    try:
+                        async for chat in run_agent_conversation(lead_id):
+                            formatted_data = f"data: {json.dumps(chat)}\n\n"
+                            q.put(formatted_data)
+                    except Exception as e:
+                        logger.error(f"에이전트 대화 실행 중 오류: {e}", exc_info=True)
+                        q.put(f"data: {json.dumps({'error': str(e)})}\n\n")
+                    finally:
+                        # 작업 완료 후 정리
+                        await sync_to_async(close_old_connections)()
+                        q.put(None)
 
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
